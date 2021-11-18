@@ -16,8 +16,8 @@ def main():
             key = current_section.split(':', 1)[1].strip()
             quiz_questions[key] = text_sections[index+1].split(':', 1)[1].strip()
     
-    country, capital = random.choice(list(quiz_questions.items()))
-    print(country , '\n-----\n', capital)
+    question, answer = random.choice(list(quiz_questions.items()))
+
 
 if __name__ == '__main__':
     main()
