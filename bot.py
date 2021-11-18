@@ -1,8 +1,10 @@
 import os
 import random
 
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 from dotenv import load_dotenv
+from telegram import ReplyKeyboardMarkup
+from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
+
 
 def parse_questions():
     quiz_questions = {}
@@ -21,9 +23,13 @@ def parse_questions():
     question, answer = random.choice(list(quiz_questions.items()))
 
 
-def echo(bot, update):
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
+def start(bot, update):
+    custom_keyboard = [['Новый выпуск', 'Сдаться'],
+                       ['Мой счёт']]
+    reply_markup = ReplyKeyboardMarkup(custom_keyboard)
+    bot.send_message(chat_id=update.message.chat_id,
+                     text="Custom Keyboard Test",
+                     reply_markup=reply_markup)
 
 
 def main():
@@ -32,7 +38,7 @@ def main():
 
     dp = updater.dispatcher
 
-    dp.add_handler(MessageHandler(Filters.text, echo))
+    dp.add_handler(CommandHandler('start', start))
 
     updater.start_polling()
     updater.idle()
