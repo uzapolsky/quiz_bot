@@ -1,6 +1,7 @@
 import os
 import random
 from functools import partial
+from parse_questions import parse_questions
 
 import redis
 from dotenv import load_dotenv
@@ -14,24 +15,6 @@ KEYBOARD = [['Новый вопрос', 'Сдаться'],
 REPLY_MARKUP = ReplyKeyboardMarkup(KEYBOARD, one_time_keyboard=True)
 
 
-def parse_questions(questions_folder):
-    
-    quiz_questions = {}
-    text_sections = []
-    for filename in os.listdir(questions_folder):
-        with open(f'{questions_folder}/{filename}', encoding='KOI8-R') as f:
-            text_sections.extend(f.read().split('\n\n'))
-        
-    for index, current_section in enumerate(text_sections):
-        if (current_section.startswith('Вопрос') and
-                index+1 < len(text_sections) and
-                text_sections[index+1].startswith('Ответ')):
-            key = current_section.split(':', 1)[1].strip()
-            quiz_questions[key] = text_sections[index+1].split(':', 1)[1].strip()
-    
-    return quiz_questions
-
-
 def start(update, context):
     
     update.message.reply_text('Привет! Начинаем викторину!', reply_markup=REPLY_MARKUP)
@@ -40,7 +23,7 @@ def start(update, context):
 
 def handle_new_question_request(update, context, quiz_questions, db):
     
-    question, answer = random.choice(list(quiz_questions.items()))
+    question, _ = random.choice(list(quiz_questions.items()))
     tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
     db.set(tg_user_id, question)
     update.message.reply_text(text=question)
@@ -53,9 +36,9 @@ def handle_solution_attempt(update, context, quiz_questions, db):
     answer = update.message.text
     question = db.get(tg_user_id).decode('UTF-8')
     correct_answer_raw = quiz_questions[question].split('.', 1)[0]
-    correct_answer_short = correct_answer_raw.split('(', 1)[0]
+    correct_answer = correct_answer_raw.split('(', 1)[0]
 
-    if answer.lower() ==  correct_answer_short.lower():
+    if answer.lower() ==  correct_answer.lower():
         update.message.reply_text(
             'Правильно! Поздравляю! Для следующего вопроса нажми "Новый вопрос".',
             reply_markup=REPLY_MARKUP,
