@@ -2,6 +2,7 @@ import os
 import random
 from functools import partial
 
+import redis
 from dotenv import load_dotenv
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
@@ -32,9 +33,11 @@ def start(bot, update):
                      reply_markup=reply_markup)
 
 
-def new_question(bot, update, quiz_questions):
+def new_question(bot, update, quiz_questions, db):
     question, answer = random.choice(list(quiz_questions.items()))
-    print(question, answer)
+    tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
+    db.set(tg_user_id, question)
+    print(db.get(tg_user_id).decode('UTF-8'))
     bot.send_message(chat_id=update.message.chat_id,
                      text=question)
 
@@ -44,11 +47,16 @@ def main():
     quiz_questions = parse_questions(os.environ['QUESTIONS_FOLDER'])
     
     updater = Updater(os.environ['TG_BOT_TOKEN'])
+    db = redis.Redis(
+        host=os.environ['REDIS_HOST'],
+        port=os.environ['REDIS_PORT'],
+        password=os.environ['REDIS_PASSWORD']
+    )
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(MessageHandler(Filters.regex('^Новый вопрос$'),
-                   partial(new_question, quiz_questions=quiz_questions))),
+                   partial(new_question, quiz_questions=quiz_questions, db=db))),
 
     updater.start_polling()
     updater.idle()
