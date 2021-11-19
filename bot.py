@@ -15,6 +15,7 @@ REPLY_MARKUP = ReplyKeyboardMarkup(KEYBOARD, one_time_keyboard=True)
 
 
 def parse_questions(questions_folder):
+    
     quiz_questions = {}
     text_sections = []
     for filename in os.listdir(questions_folder):
@@ -38,6 +39,7 @@ def start(update, context):
 
 
 def handle_new_question_request(update, context, quiz_questions, db):
+    
     question, answer = random.choice(list(quiz_questions.items()))
     tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
     db.set(tg_user_id, question)
@@ -46,11 +48,12 @@ def handle_new_question_request(update, context, quiz_questions, db):
 
 
 def handle_solution_attempt(update, context, quiz_questions, db):
+    
     tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
     answer = update.message.text
     question = db.get(tg_user_id).decode('UTF-8')
-    correct_answer_full = quiz_questions[question].split('.', 1)[0]
-    correct_answer_short = correct_answer_full.split('(', 1)[0]
+    correct_answer_raw = quiz_questions[question].split('.', 1)[0]
+    correct_answer_short = correct_answer_raw.split('(', 1)[0]
 
     if answer.lower() ==  correct_answer_short.lower():
         update.message.reply_text(
@@ -64,6 +67,20 @@ def handle_solution_attempt(update, context, quiz_questions, db):
             reply_markup=REPLY_MARKUP,
         )
         return ANSWER
+
+
+def handle_give_up(update, context, quiz_questions, db):
+
+    tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
+    question = db.get(tg_user_id).decode('UTF-8')
+    answer = quiz_questions[question]
+    
+    update.message.reply_text(
+        'Правильный ответ:\n{0}'.format(answer),
+        reply_markup=REPLY_MARKUP,
+    )
+
+    handle_new_question_request(update, context, quiz_questions, db)
 
 
 def done(update, context):
@@ -95,11 +112,16 @@ def main():
         entry_points=[CommandHandler('start', start)],
         states={
             QUESTION: [
-                MessageHandler(Filters.regex('^Новый вопрос$'), partial(handle_new_question_request,
-                                                                        quiz_questions=quiz_questions,
-                                                                        db=db)),
+                MessageHandler(Filters.regex('^Новый вопрос$'),
+                               partial(handle_new_question_request,
+                                       quiz_questions=quiz_questions,
+                                       db=db)),
             ],
             ANSWER: [
+                MessageHandler(Filters.regex('^Сдаться$'),
+                               partial(handle_give_up,
+                                       quiz_questions=quiz_questions,
+                                       db=db)),
                 MessageHandler(Filters.text, partial(handle_solution_attempt,
                                                      quiz_questions=quiz_questions,
                                                      db=db)),
