@@ -4,8 +4,14 @@ from functools import partial
 
 import redis
 from dotenv import load_dotenv
-from telegram import ReplyKeyboardMarkup
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import (CommandHandler, ConversationHandler, Filters,
+                          MessageHandler, Updater)
+
+QUESTION, ANSWER = range(2)
+KEYBOARD = [['Новый вопрос', 'Сдаться'],
+                       ['Мой счёт']]
+REPLY_MARKUP = ReplyKeyboardMarkup(KEYBOARD, one_time_keyboard=True)
 
 
 def parse_questions(questions_folder):
@@ -25,21 +31,52 @@ def parse_questions(questions_folder):
     return quiz_questions
 
 
-def start(bot, update):
-    custom_keyboard = [['Новый вопрос', 'Сдаться'],
-                       ['Мой счёт']]
-    reply_markup = ReplyKeyboardMarkup(custom_keyboard)
-    bot.send_message(chat_id=update.message.chat_id,
-                     reply_markup=reply_markup)
+def start(update, context):
+    
+    update.message.reply_text('Привет! Начинаем викторину!', reply_markup=REPLY_MARKUP)
+    return QUESTION
 
 
-def new_question(bot, update, quiz_questions, db):
+def handle_new_question_request(update, context, quiz_questions, db):
     question, answer = random.choice(list(quiz_questions.items()))
     tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
     db.set(tg_user_id, question)
-    print(db.get(tg_user_id).decode('UTF-8'))
-    bot.send_message(chat_id=update.message.chat_id,
-                     text=question)
+    update.message.reply_text(text=question)
+    return ANSWER
+
+
+def handle_solution_attempt(update, context, quiz_questions, db):
+    tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
+    answer = update.message.text
+    question = db.get(tg_user_id).decode('UTF-8')
+    correct_answer_full = quiz_questions[question].split('.', 1)[0]
+    correct_answer_short = correct_answer_full.split('(', 1)[0]
+
+    if answer.lower() ==  correct_answer_short.lower():
+        update.message.reply_text(
+            'Правильно! Поздравляю! Для следующего вопроса нажми "Новый вопрос".',
+            reply_markup=REPLY_MARKUP,
+        )
+        return QUESTION
+    else:
+        update.message.reply_text(
+            'Неправильно… Попробуешь ещё раз?',
+            reply_markup=REPLY_MARKUP,
+        )
+        return ANSWER
+
+
+def done(update, context):
+
+    user_data = context.user_data
+
+    update.message.reply_text(
+        'Возвращайтесь еще!',
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    user_data.clear()
+    return ConversationHandler.END
 
 
 def main():
@@ -54,10 +91,24 @@ def main():
     )
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler('start', start))
-    dp.add_handler(MessageHandler(Filters.regex('^Новый вопрос$'),
-                   partial(new_question, quiz_questions=quiz_questions, db=db))),
-
+    conversation_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            QUESTION: [
+                MessageHandler(Filters.regex('^Новый вопрос$'), partial(handle_new_question_request,
+                                                                        quiz_questions=quiz_questions,
+                                                                        db=db)),
+            ],
+            ANSWER: [
+                MessageHandler(Filters.text, partial(handle_solution_attempt,
+                                                     quiz_questions=quiz_questions,
+                                                     db=db)),
+            ],
+        
+        },
+        fallbacks=[MessageHandler(Filters.regex('^Конец$'), done)], 
+    )
+    dp.add_handler(conversation_handler)
     updater.start_polling()
     updater.idle()
 
