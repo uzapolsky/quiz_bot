@@ -12,7 +12,7 @@ def parse_questions(questions_folder):
         if (current_section.startswith('Вопрос') and
                 index+1 < len(text_sections) and
                 text_sections[index+1].startswith('Ответ')):
-            key = current_section.split(':', 1)[1].strip()
-            quiz_questions[key] = text_sections[index+1].split(':', 1)[1].strip()
+            question = current_section.split(':', 1)[1].strip()
+            quiz_questions[question] = text_sections[index+1].split(':', 1)[1].strip()
     
     return quiz_questions
