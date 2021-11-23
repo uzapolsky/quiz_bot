@@ -34,7 +34,7 @@ def handle_solution_attempt(update, context, db):
     
     tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
     user_answer = update.message.text
-    answer = db.get(tg_user_id).decode('UTF-8')
+    answer = db.get(tg_user_id)
     correct_answer_raw = answer.split('.', 1)[0]
     correct_answer = correct_answer_raw.split('(', 1)[0]
 
@@ -55,7 +55,7 @@ def handle_solution_attempt(update, context, db):
 def handle_give_up(update, context, quiz_questions, db):
 
     tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
-    answer = db.get(tg_user_id).decode('UTF-8')
+    answer = db.get(tg_user_id)
     
     update.message.reply_text(
         'Правильный ответ:\n{0}'.format(answer),
@@ -86,7 +86,8 @@ def main():
     db = redis.Redis(
         host=os.environ['REDIS_HOST'],
         port=os.environ['REDIS_PORT'],
-        password=os.environ['REDIS_PASSWORD']
+        password=os.environ['REDIS_PASSWORD'],
+        decode_responses=True
     )
     dp = updater.dispatcher
 
