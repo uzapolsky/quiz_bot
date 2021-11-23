@@ -25,20 +25,20 @@ def handle_new_question_request(update, context, quiz_questions, db):
     
     question, _ = random.choice(list(quiz_questions.items()))
     tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
-    db.set(tg_user_id, question)
+    db.set(tg_user_id, quiz_questions[question])
     update.message.reply_text(text=question)
     return ANSWER
 
 
-def handle_solution_attempt(update, context, quiz_questions, db):
+def handle_solution_attempt(update, context, db):
     
     tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
-    answer = update.message.text
-    question = db.get(tg_user_id).decode('UTF-8')
-    correct_answer_raw = quiz_questions[question].split('.', 1)[0]
+    user_answer = update.message.text
+    answer = db.get(tg_user_id).decode('UTF-8')
+    correct_answer_raw = answer.split('.', 1)[0]
     correct_answer = correct_answer_raw.split('(', 1)[0]
 
-    if answer.lower() ==  correct_answer.lower():
+    if user_answer.lower() ==  correct_answer.lower():
         update.message.reply_text(
             'Правильно! Поздравляю! Для следующего вопроса нажми "Новый вопрос".',
             reply_markup=REPLY_MARKUP,
@@ -55,8 +55,7 @@ def handle_solution_attempt(update, context, quiz_questions, db):
 def handle_give_up(update, context, quiz_questions, db):
 
     tg_user_id = 'tg_{}'.format(update.message.from_user['id'])
-    question = db.get(tg_user_id).decode('UTF-8')
-    answer = quiz_questions[question]
+    answer = db.get(tg_user_id).decode('UTF-8')
     
     update.message.reply_text(
         'Правильный ответ:\n{0}'.format(answer),
@@ -106,7 +105,6 @@ def main():
                                        quiz_questions=quiz_questions,
                                        db=db)),
                 MessageHandler(Filters.text, partial(handle_solution_attempt,
-                                                     quiz_questions=quiz_questions,
                                                      db=db)),
             ],
         
