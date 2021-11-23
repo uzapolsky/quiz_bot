@@ -44,12 +44,12 @@ def handle_solution_attempt(update, context, db):
             reply_markup=REPLY_MARKUP,
         )
         return QUESTION
-    else:
-        update.message.reply_text(
-            'Неправильно… Попробуешь ещё раз?',
-            reply_markup=REPLY_MARKUP,
-        )
-        return ANSWER
+
+    update.message.reply_text(
+        'Неправильно… Попробуешь ещё раз?',
+        reply_markup=REPLY_MARKUP,
+    )
+    return ANSWER
 
 
 def handle_give_up(update, context, quiz_questions, db):

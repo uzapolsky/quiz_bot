@@ -12,7 +12,7 @@ from parse_questions import parse_questions
 def new_question(event, vk, keyboard, quiz_questions,db):
     vk_user_id = 'vk_{}'.format(event.user_id)
     question, _ = random.choice(list(quiz_questions.items()))
-    db.set(vk_user_id, question)
+    db.set(vk_user_id, quiz_questions[question])
     vk.messages.send(
         user_id=event.user_id,
         message=question,
@@ -20,10 +20,9 @@ def new_question(event, vk, keyboard, quiz_questions,db):
         keyboard=keyboard.get_keyboard(),
     )
 
-def give_up(event, vk, keyboard, quiz_questions,db):
+def give_up(event, vk, keyboard, db):
     vk_user_id = 'vk_{}'.format(event.user_id)
-    question = db.get(vk_user_id).decode('UTF-8')
-    answer = quiz_questions[question]
+    answer = db.get(vk_user_id).decode('UTF-8')
     vk.messages.send(
         user_id=event.user_id,
         message=answer,
@@ -31,10 +30,10 @@ def give_up(event, vk, keyboard, quiz_questions,db):
         keyboard=keyboard.get_keyboard()
     )
     
-def solution_attempt(event, vk, keyboard, quiz_questions,db):
+def solution_attempt(event, vk, keyboard, db):
     vk_user_id = 'vk_{}'.format(event.user_id)
-    question = db.get(vk_user_id).decode('UTF-8')
-    correct_answer_raw = quiz_questions[question].split('.', 1)[0]
+    answer = db.get(vk_user_id).decode('UTF-8')
+    correct_answer_raw = answer.split('.', 1)[0]
     correct_answer = correct_answer_raw.split('(', 1)[0]
     if event.text == correct_answer:
         vk.messages.send(
@@ -80,10 +79,10 @@ def main():
             if event.text == 'Новый вопрос':
                 new_question(event, vk, keyboard, quiz_questions, db)
             elif event.text == 'Сдаться':
-                give_up(event, vk, keyboard, quiz_questions, db)
+                give_up(event, vk, keyboard, db)
                 new_question(event, vk, keyboard, quiz_questions, db)
             else:
-                solution_attempt(event, vk, keyboard, quiz_questions,db)
+                solution_attempt(event, vk, keyboard, db)
 
 
 if __name__ == '__main__':
