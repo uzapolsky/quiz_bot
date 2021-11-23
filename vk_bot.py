@@ -22,7 +22,7 @@ def new_question(event, vk, keyboard, quiz_questions,db):
 
 def give_up(event, vk, keyboard, db):
     vk_user_id = 'vk_{}'.format(event.user_id)
-    answer = db.get(vk_user_id).decode('UTF-8')
+    answer = db.get(vk_user_id)
     vk.messages.send(
         user_id=event.user_id,
         message=answer,
@@ -32,7 +32,7 @@ def give_up(event, vk, keyboard, db):
     
 def solution_attempt(event, vk, keyboard, db):
     vk_user_id = 'vk_{}'.format(event.user_id)
-    answer = db.get(vk_user_id).decode('UTF-8')
+    answer = db.get(vk_user_id)
     correct_answer_raw = answer.split('.', 1)[0]
     correct_answer = correct_answer_raw.split('(', 1)[0]
     if event.text == correct_answer:
@@ -58,7 +58,8 @@ def main():
     db = redis.Redis(
         host=os.environ['REDIS_HOST'],
         port=os.environ['REDIS_PORT'],
-        password=os.environ['REDIS_PASSWORD']
+        password=os.environ['REDIS_PASSWORD'],
+        decode_responses=True
     )
     quiz_questions = parse_questions(os.environ['QUESTIONS_FOLDER'])
 
